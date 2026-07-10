@@ -1,0 +1,100 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        env:
+          BASE_URL: ${{ vars.BASE_URL || 'https://auth2.tlslogistics.org' }}
+          FULL_ACCESS_EMAIL: ${{ secrets.FULL_ACCESS_EMAIL }}
+          FULL_ACCESS_PASSWORD: ${{ secrets.FULL_ACCESS_PASSWORD }}
+          VIEW_ONLY_EMAIL: ${{ secrets.VIEW_ONLY_EMAIL }}
+          VIEW_ONLY_PASSWORD: ${{ secrets.VIEW_ONLY_PASSWORD }}
+          CREATE_ACCESS_EMAIL: ${{ secrets.CREATE_ACCESS_EMAIL }}
+          CREATE_ACCESS_PASSWORD: ${{ secrets.CREATE_ACCESS_PASSWORD }}
+        run: npx playwright test
+
+      - name: Generate Allure report
+        if: always()
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+          retention-days: 14
+
+      - name: Upload Playwright report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+
+      - name: Build email summary
+        if: always()
+        run: |
+          SUMMARY=allure-report/widgets/summary.json
+          if [ -f "$SUMMARY" ]; then
+            STATS=$(jq -r '.statistic | "Total: \(.total)\nPassed: \(.passed)\nFailed: \(.failed)\nBroken: \(.broken)\nSkipped: \(.skipped)"' "$SUMMARY")
+          else
+            STATS="Allure summary not available (suite may have crashed before reporting)."
+          fi
+          cat > email-body.txt <<EOF
+          PyMetrikos UI E2E run — ${{ github.repository }}
+          Branch/ref: ${{ github.ref_name }}
+          Trigger:    ${{ github.event_name }} by ${{ github.actor }}
+          Commit:     ${{ github.sha }}
+
+          Results
+          -------
+          $STATS
+
+          Full Allure report (artifact download):
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          The complete Allure report is attached as allure-report.zip.
+          EOF
+          zip -qr allure-report.zip allure-report
+
+      - name: Email report
+        if: ${{ always() && secrets.EMAIL_HOST != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.EMAIL_HOST }}
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: 'E2E ${{ job.status }} — pymetrikosUI ${{ github.ref_name }} run #${{ github.run_number }}'
+          to: ${{ secrets.EMAIL_TO }}
+          from: PyMetrikos E2E <${{ secrets.EMAIL_USER }}>
+          body: file://email-body.txt
+          attachments: allure-report.zip
