@@ -23,3 +23,14 @@ export class DashboardPage {
     await expect(this.sidebarDashboard()).toBeVisible();
   }
 }
+
+/** Protected PyMetrikos routes exercised by the protected-routes feature. */
+export const PROTECTED_ROUTES = [
+  '/pymetrikosui',
+  '/pymetrikosui/dashboard',
+  '/pymetrikosui/dashboard/1/pause-ad',
+  '/pymetrikosui/dashboard/2/pause-ad',
+];
+
+/** Server-guarded API routes that must reject unauthenticated callers. */
+export const PROTECTED_API_ROUTES = ['/api/auth/session', '/api/auth/user'];
