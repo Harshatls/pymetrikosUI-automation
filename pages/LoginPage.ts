@@ -23,7 +23,11 @@ export class LoginPage {
   readonly passwordInput = () => this.page.locator('input[type="password"]').first();
   readonly nativeLoginButton = () =>
     this.page.getByRole('button', { name: /^log\s*in/i }).last();
-  readonly nativeError = () => this.page.getByText(/invalid email or password/i);
+  readonly invalidCredError = () => this.page.getByText(/invalid email or password/i);
+  readonly rateLimitError = () => this.page.getByText(/too many login attempts/i);
+  /** Any native-form rejection: bad credentials OR the rate-limit lockout. */
+  readonly nativeError = () =>
+    this.page.getByText(/invalid email or password|too many login attempts/i);
   readonly changePasswordLink = () => this.page.getByText(/change password/i);
 
   // --- Microsoft SSO ---
