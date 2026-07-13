@@ -7,6 +7,7 @@ import { PYM_DASHBOARD_PATH } from '../utils/env';
  *  Created by, Edited At, Last Edited by, Options)
  */
 export const RULES_TABLE_HEADERS = [
+  '#',
   'Status',
   'Rule Name',
   'Max Spend/Clicks',
@@ -24,13 +25,22 @@ export class DashboardPage {
   constructor(readonly page: Page) {}
 
   readonly logo = () => this.page.getByText('PyMetrikos UI').first();
-  readonly sidebarDashboard = () => this.page.getByText('Dashboard', { exact: true }).first();
-  readonly sidebarCreateRule = () => this.page.getByText('Create a Rule').first();
+  // data-test-based sidebar locators (from the app's own test hooks)
+  readonly sidebarDashboard = () =>
+    this.page.locator('[data-test="dashboard-button-label"]').first();
+  readonly sidebarCreateRule = () =>
+    this.page.locator('[data-test="create-rule-button-label"]').first();
+  readonly createRuleButton = () =>
+    this.page.locator('[data-test="create-rule-button"]').first();
   readonly searchBox = () => this.page.getByPlaceholder(/search/i).first();
   readonly goToConsoleButton = () =>
     this.page.getByRole('button', { name: /go to console/i }).first();
-  readonly channelDropdown = () => this.page.locator('select, [role="combobox"]').first();
+  readonly channelDropdown = () =>
+    this.page.locator('select.font-bold.text-lg.max-w-md').first();
   readonly rulesTable = () => this.page.locator('table').first();
+  readonly tableHeaders = () => this.page.locator('thead th');
+  readonly statusToggles = () => this.page.locator('input[data-cy="toggleInput"]');
+  readonly ruleRows = () => this.page.locator('tbody tr');
   readonly noAccessBanner = () => this.page.getByText(/you do not have access/i);
   header = (name: string) =>
     this.page.getByRole('columnheader', { name, exact: true }).first();
