@@ -18,17 +18,24 @@ and are cached as storageState files under `.auth/`.
 
 ### Test users (creds in `.env` / GitHub secrets — never committed)
 
-| Role key | Access |
-|---|---|
-| `fullAccess` | create/edit on all channels (tls.app) |
-| `viewOnly` | view only (apptest1) |
-| `createAccess` | create on subset of channels (apptest2) |
+| Role key | Login | Access |
+|---|---|---|
+| `qaAdmin` | native (email/password) | QA automation account (`QA_EMAIL`/`QA_PASSWORD`); requested all 66 PyMetrikosUI features — **pending grant** as of writing |
+| `fullAccess` | SSO | create/edit on all channels (tls.app) — creds not yet set |
+| `viewOnly` | SSO | view only (apptest1) — creds not yet set |
+| `createAccess` | SSO | create on subset of channels (apptest2) — creds not yet set |
+
+Authenticated specs point at `authFile('qaAdmin')` and **self-skip via
+`DashboardPage.gotoOrSkip`** until the account's PyMetrikosUI access is granted, then
+run automatically. Role-comparison specs (view-only vs create) need dedicated SSO
+accounts and skip until those creds exist.
 
 ## Git workflow
 
-One feature = one branch (`feature/<name>`) = one PR to `main`, squash-merged after
-approval. Setup lives on `chore/test-suite-setup`. Every PR description lists positive
-and negative scenarios; a self-review comment is posted on each PR.
+Features 1–4 (auth-login, protected-routes, session-and-console, plus scaffold) were
+delivered as branch-per-feature PRs. From feature 5 onward the owner switched to
+**committing directly to `main`** (single maintainer). PR #4 (session-and-console)
+remains open on GitHub; its spec was also consolidated onto `main`.
 
 ## Feature list (each row = branch + PR, in order)
 
