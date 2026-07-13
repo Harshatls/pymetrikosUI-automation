@@ -45,6 +45,13 @@ export class DashboardPage {
   header = (name: string) =>
     this.page.getByRole('columnheader', { name, exact: true }).first();
 
+  /** The table row for a rule with the given (unique) name. */
+  rowByName = (name: string) =>
+    this.page.locator('tbody tr', { hasText: name }).first();
+
+  /** Action controls (edit / duplicate / delete) in a rule row's Options cell. */
+  rowActions = (name: string) => this.rowByName(name).locator('td').last();
+
   async goto() {
     await this.page.goto(PYM_DASHBOARD_PATH);
   }

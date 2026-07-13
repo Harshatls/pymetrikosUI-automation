@@ -19,10 +19,19 @@ for (const role of ROLES) {
     setup.skip(!hasCreds(role), `No credentials configured for ${role}`);
     const { email, password } = credsFor(role);
     const loginPage = new LoginPage(page);
-    if (LOGIN_METHOD[role] === 'native') {
-      await loginPage.loginNative(email, password);
-    } else {
-      await loginPage.login(email, password);
+    try {
+      if (LOGIN_METHOD[role] === 'native') {
+        await loginPage.loginNative(email, password);
+      } else {
+        await loginPage.login(email, password);
+      }
+    } catch (err) {
+      // A shared-IP rate-limit lockout is transient/environmental, not a test
+      // failure — skip so dependent specs skip too instead of failing the suite.
+      if (err instanceof Error && /too many login attempts/i.test(err.message)) {
+        setup.skip(true, 'Login rate-limited (transient) — skipping auth for this run');
+      }
+      throw err;
     }
     fs.mkdirSync(path.dirname(authFile(role)), { recursive: true });
     await page.context().storageState({ path: authFile(role) });

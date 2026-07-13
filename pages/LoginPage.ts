@@ -19,7 +19,8 @@ export class LoginPage {
   constructor(readonly page: Page) {}
 
   // --- native ("External users") form ---
-  readonly emailInput = () => this.page.locator('input[type="email"]').first();
+  readonly emailInput = () =>
+    this.page.locator('input[type="email"], input[name="email"]').first();
   readonly passwordInput = () => this.page.locator('input[type="password"]').first();
   readonly nativeLoginButton = () =>
     this.page.getByRole('button', { name: /^log\s*in/i }).last();
@@ -93,7 +94,9 @@ export class LoginPage {
 
   /** Full native (external-user) login flow: navigate, submit, wait until logged in. */
   async loginNative(email: string, password: string) {
-    await this.goto();
+    // go straight to the login page and wait for the form to settle before filling
+    await this.page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await this.emailInput().waitFor({ state: 'visible', timeout: 30_000 });
     await this.submitNativeCredentials(email, password);
     const err = this.nativeError();
     // race the success redirect against a rejection banner so bad creds fail fast
