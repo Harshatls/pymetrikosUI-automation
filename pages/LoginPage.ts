@@ -91,6 +91,23 @@ export class LoginPage {
     await this.nativeLoginButton().click();
   }
 
+  /** Full native (external-user) login flow: navigate, submit, wait until logged in. */
+  async loginNative(email: string, password: string) {
+    await this.goto();
+    await this.submitNativeCredentials(email, password);
+    const err = this.nativeError();
+    // race the success redirect against a rejection banner so bad creds fail fast
+    await Promise.race([
+      this.waitForLoggedIn(),
+      err.waitFor({ state: 'visible', timeout: 20_000 }),
+    ]);
+    if (await err.isVisible().catch(() => false)) {
+      throw new Error(
+        `Native login rejected for "${email}": ${await err.textContent()} — check QA_EMAIL/QA_PASSWORD in .env.`,
+      );
+    }
+  }
+
   async waitForLoggedIn() {
     const host = new URL(BASE_URL).host;
     await this.page.waitForURL((url) => url.host === host, { timeout: 30_000 });

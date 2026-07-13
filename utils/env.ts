@@ -3,7 +3,21 @@ import * as path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
 
-export type Role = 'fullAccess' | 'viewOnly' | 'createAccess';
+export type Role = 'fullAccess' | 'viewOnly' | 'createAccess' | 'qaAdmin';
+
+/**
+ * How a role authenticates:
+ *  - 'sso'    -> Microsoft SSO (Transformative employee accounts)
+ *  - 'native' -> the external-users email/password form (e.g. the QA automation account)
+ */
+export type LoginMethod = 'sso' | 'native';
+
+export const LOGIN_METHOD: Record<Role, LoginMethod> = {
+  fullAccess: 'sso',
+  viewOnly: 'sso',
+  createAccess: 'sso',
+  qaAdmin: 'native',
+};
 
 export const BASE_URL = process.env.BASE_URL ?? 'https://auth2.tlslogistics.org';
 
@@ -28,6 +42,10 @@ const CREDS: Record<Role, Credentials> = {
   createAccess: {
     email: process.env.CREATE_ACCESS_EMAIL,
     password: process.env.CREATE_ACCESS_PASSWORD,
+  },
+  qaAdmin: {
+    email: process.env.QA_EMAIL,
+    password: process.env.QA_PASSWORD,
   },
 };
 
