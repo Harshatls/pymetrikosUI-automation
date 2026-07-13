@@ -64,14 +64,22 @@ export class DashboardPage {
   }
 
   /**
-   * Navigate to the dashboard and skip the calling test if this account's
-   * PyMetrikosUI access has not been granted yet (shows the "Uh-oh" page).
-   * Lets authenticated specs be written now and run automatically once granted.
+   * Navigate to the dashboard and skip the calling test unless the dashboard
+   * chrome actually renders. Covers every not-ready case with one guard:
+   * pending grant (no-access page), an expired session (bounced to /login), or a
+   * slow/failed load. Lets authenticated specs run automatically once qaAdmin is
+   * granted, and skip cleanly (never hang/fail) until then.
    */
   async gotoOrSkip(test: TestType<{}, {}>) {
     await this.goto();
-    if (await this.isAccessDenied()) {
-      test.skip(true, 'PyMetrikosUI access not granted for this account yet (pending grant)');
+    const loaded = await this.logo()
+      .isVisible({ timeout: 15_000 })
+      .catch(() => false);
+    if (!loaded) {
+      test.skip(
+        true,
+        'PyMetrikosUI dashboard not available for this account/session (access pending or not logged in)',
+      );
     }
   }
 

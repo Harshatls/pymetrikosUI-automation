@@ -18,33 +18,34 @@ test.describe('api-dashboard-data', () => {
   test.skip(!hasCreds('qaAdmin'), 'qaAdmin credentials not configured');
   test.use({ storageState: authFile('qaAdmin') });
 
+  const isDataCall = (url: string, resourceType: string) =>
+    /rule|dashboard|pause|pymetrikos/i.test(url) &&
+    (resourceType === 'fetch' || resourceType === 'xhr');
+
   test('dashboard data endpoint returns rule data when authenticated', async ({ page }) => {
     const dashboard = new DashboardPage(page);
-    // capture the JSON API call that backs the rules table
-    const dataResp = page.waitForResponse(
-      (r) =>
-        /rule|dashboard|pause|pymetrikos/i.test(r.url()) &&
-        (r.request().resourceType() === 'fetch' || r.request().resourceType() === 'xhr') &&
-        r.headers()['content-type']?.includes('application/json') === true,
-      { timeout: 20_000 },
-    );
-    await dashboard.gotoOrSkip(test);
-    const resp = await dataResp;
+    await dashboard.gotoOrSkip(test); // confirms access first (skips if not granted)
+    // reload while listening so we reliably capture the backing JSON call
+    const [resp] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          isDataCall(r.url(), r.request().resourceType()) &&
+          (r.headers()['content-type'] ?? '').includes('application/json'),
+        { timeout: 20_000 },
+      ),
+      page.reload(),
+    ]);
     expect(resp.status(), `data call ${resp.url()}`).toBe(200);
-    const body = await resp.json();
-    expect(body).toBeTruthy();
+    expect(await resp.json()).toBeTruthy();
   });
 
   test('the discovered data endpoint rejects unauthenticated callers', async ({ page, playwright }) => {
     const dashboard = new DashboardPage(page);
-    const dataReq = page.waitForRequest(
-      (r) =>
-        /rule|dashboard|pause|pymetrikos/i.test(r.url()) &&
-        (r.resourceType() === 'fetch' || r.resourceType() === 'xhr'),
-      { timeout: 20_000 },
-    );
     await dashboard.gotoOrSkip(test);
-    const req = await dataReq;
+    const [req] = await Promise.all([
+      page.waitForRequest((r) => isDataCall(r.url(), r.resourceType()), { timeout: 20_000 }),
+      page.reload(),
+    ]);
     const endpoint = req.url();
 
     // fresh request context with NO cookies/session
